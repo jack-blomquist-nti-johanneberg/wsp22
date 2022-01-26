@@ -1,0 +1,15 @@
+
+*{
+    background: antiquewhite;
+}
+
+nav{
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    flex-direction: row;
+}
+
+#title{
+    text-align: center;
+}
