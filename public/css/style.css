@@ -1,6 +1,7 @@
 
 *{
-    background: antiquewhite;
+    background: tomato;
+    color: whitesmoke;
 }
 
 nav{
@@ -8,6 +9,10 @@ nav{
     align-items: center;
     justify-content: space-evenly;
     flex-direction: row;
+}
+
+input {
+    background: salmon;
 }
 
 #title{

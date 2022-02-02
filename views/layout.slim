@@ -5,13 +5,17 @@ html lang="en"
         meta charset="UTF-8"/
         meta http-equiv="X-UA-Compatible" content="IE=edge"/
         meta name="viewport" content="width=device-width, initial-scale=1.0"/
-        title rcpDB
+        title recpDB
         link rel="stylesheet" href="/css/style.css"/
     body 
         header 
-            h1#title rcpDB
+            h1#title recpDB
+
         nav
             a href="/" home
             a href="/register" register
             a href="/login" login
+
         == yield
+
+        p=session[:message]
