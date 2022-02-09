@@ -1,2 +1,9 @@
 
-p Hello user!
+h2 #{users_info['username']}'s profile
+p role: #{users_info['role']}
+p recipes:
+section.all_recipes
+    -users_recipes.each do |recipe|
+        article.recipe
+            a href="/recipes/#{recipe['id']}"
+                h3=recipe['title']

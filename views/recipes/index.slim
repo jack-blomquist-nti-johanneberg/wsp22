@@ -1,0 +1,19 @@
+
+h1 #{recipes_info['title']}
+
+br
+
+h3 Background
+p=recipes_info['info']
+
+br
+
+h3 Ingredients 
+ul
+    -recipes_info['ingredients'].split(',').each do |ingredient|
+        li=ingredient
+
+h3 Steps 
+ol
+    -recipes_info['steps'].split(',').each do |step|
+        li=step

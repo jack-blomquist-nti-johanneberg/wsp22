@@ -1,2 +1,10 @@
 
-p HOMEPAGE
+h2 Welcome to recpDB! You can browse recipes created by anyone below!
+
+section.all_recipes
+    -recipes.each do |recipe|
+        article.recipe
+            a href="/recipes/#{recipe['id']}"
+                h3=recipe['title']
+            a href="/users/#{recipe['user_id']}/profile"
+                p by #{recipe['username']}

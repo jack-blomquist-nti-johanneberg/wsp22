@@ -11,10 +11,22 @@ nav{
     flex-direction: row;
 }
 
-input {
+input{
     background: salmon;
 }
 
 #title{
     text-align: center;
+}
+
+.recipe{
+    width: 150px;
+    height: 100px;
+    background: salmon;
+    border: 2px black solid;
+}
+
+.recipe *{
+    text-align: center;
+    background: salmon;
 }

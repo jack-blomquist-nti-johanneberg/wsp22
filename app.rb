@@ -8,7 +8,7 @@ enable :sessions
 
 # setup
 
-clear_message_routes = ["/register"]
+clear_message_routes = ["/register", "/error"]
 
 def db_connection(route)
     db = SQLite3::Database.new(route)
@@ -18,8 +18,6 @@ end
 
 before do
     if session[:message] != nil && not(clear_message_routes.include?(request.path_info))
-        p request.path_info
-        p "hello"
         session[:message] = nil
     end
 end
@@ -27,7 +25,17 @@ end
 #get routes
 
 get('/') do
-    slim(:index)
+    db = db_connection('db/db.db')
+
+    recipes = db.execute("SELECT recipes.id,recipes.title,recipes.user_id,users.username FROM recipes INNER JOIN users ON recipes.user_id = users.id;")
+
+    p recipes
+
+    slim(:index, locals:{recipes:recipes})
+end
+
+get('/error') do
+    slim(:error)
 end
 
 get('/register') do
@@ -39,7 +47,32 @@ get('/login') do
 end
 
 get('/users/:id/profile') do
-    slim(:"users/index")
+    db = db_connection('db/db.db')
+    user_id = params[:id]
+
+    user_data = db.execute("SELECT * FROM users WHERE id=(?)",user_id).first
+    user_recipes = db.execute("SELECT title,id FROM recipes WHERE user_id=(?)",user_id)
+
+    if user_data.nil?
+        session[:message] = "user does not exist"
+        redirect('/error')
+    end
+
+    slim(:"users/index", locals:{users_info:user_data,users_recipes:user_recipes})
+end
+
+get('/recipes/:id') do
+    db = db_connection('db/db.db')
+    recipe_id = params[:id]
+
+    recipe_data = db.execute("SELECT * FROM recipes WHERE id=(?)",recipe_id).first
+
+    if recipe_data.nil?
+        session[:message] = "recipe does not exist"
+        redirect('/error')
+    end
+
+    slim(:"recipes/index", locals:{recipes_info:recipe_data})
 end
 
 #post routes
