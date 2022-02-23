@@ -4,7 +4,7 @@
     color: whitesmoke;
 }
 
-nav{
+#startpage_nav{
     display: flex;
     align-items: center;
     justify-content: space-evenly;
@@ -19,14 +19,40 @@ input{
     text-align: center;
 }
 
+.all_recipes{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
 .recipe{
     width: 150px;
     height: 100px;
     background: salmon;
     border: 2px black solid;
+    margin: 10px;
 }
 
 .recipe *{
     text-align: center;
     background: salmon;
+}
+
+.comment{
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-direction: column;
+    background: whitesmoke;
+    height: auto;
+    width: 200px;
+    padding: 5px;
+    margin: 5px;
+}
+
+.comment *{
+    display: inline-block;
+    background: whitesmoke;
+    color: black;
+    margin: 2px;
 }

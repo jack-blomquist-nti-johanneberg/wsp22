@@ -1,19 +1,41 @@
 
 h1 #{recipes_info['title']}
 
+nav
+    ul 
+        li 
+            a href="#bg" Background
+        li 
+            a href="#in" Ingredients
+        li 
+            a href="#st" Steps
+        li 
+            a href="#co" Comments 
 br
 
-h3 Background
+h3#bg Background
 p=recipes_info['info']
 
 br
 
-h3 Ingredients 
+h3#in Ingredients 
 ul
     -recipes_info['ingredients'].split(',').each do |ingredient|
         li=ingredient
 
-h3 Steps 
+h3#st Steps 
 ol
     -recipes_info['steps'].split(',').each do |step|
         li=step
+
+h3#co Comments
+
+form action="/comment" method="POST"
+    input type="text" name="comment" placeholder="Type a comment!" autocomplete="off"
+    input type="submit" value="Send Message"
+
+ul
+    -@comments.each do |comment|
+        li.comment
+            p From: #{comment['username']} (#{comment['role']})
+            p=comment['content']

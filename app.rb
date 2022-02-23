@@ -16,6 +16,7 @@ def db_connection(route)
     return db
 end
 
+#clear session-cookies
 before do
     if session[:message] != nil && not(clear_message_routes.include?(request.path_info))
         session[:message] = nil
@@ -65,7 +66,11 @@ get('/recipes/:id') do
     db = db_connection('db/db.db')
     recipe_id = params[:id]
 
+    session[:recipe_id] = recipe_id
+
     recipe_data = db.execute("SELECT * FROM recipes WHERE id=(?)",recipe_id).first
+
+    @comments = db.execute("SELECT comments.content,users.username,users.role FROM comments INNER JOIN users ON comments.user_id = users.id WHERE recipe_id=(?)",recipe_id)
 
     if recipe_data.nil?
         session[:message] = "recipe does not exist"
@@ -91,4 +96,14 @@ post('/users/new') do
         session[:message] = "Register failed: password not equal to ver_password"
     end
     redirect('/register')
+end
+
+post('/comment') do
+    db = db_connection('db/db.db')
+    comment = params[:comment]
+    recipe_id = session[:recipe_id].to_i
+
+    db.execute("INSERT INTO comments(user_id,recipe_id,content) VALUES (?,?,?)",1,recipe_id,comment)
+
+    redirect("/recipes/#{recipe_id}")
 end
