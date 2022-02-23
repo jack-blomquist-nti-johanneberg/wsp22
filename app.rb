@@ -40,6 +40,7 @@ get('/error') do
 end
 
 get('/register') do
+    @register_texts = [" make tasty pancakes!"," make bread!"," live in harmony!","... um... cook rice?"," impress family and friends!", " avoid unforeseen consequences...!"]
     slim(:register)
 end
 
