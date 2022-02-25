@@ -30,8 +30,6 @@ get('/') do
 
     recipes = db.execute("SELECT recipes.id,recipes.title,recipes.user_id,users.username FROM recipes INNER JOIN users ON recipes.user_id = users.id;")
 
-    p recipes
-
     slim(:index, locals:{recipes:recipes})
 end
 
@@ -70,6 +68,7 @@ get('/recipes/:id') do
     session[:recipe_id] = recipe_id
 
     recipe_data = db.execute("SELECT * FROM recipes WHERE id=(?)",recipe_id).first
+    recipe_data = recipe_data.merge(db.execute("SELECT username FROM users WHERE id=(?)",recipe_data['user_id']).first)
 
     @comments = db.execute("SELECT comments.content,users.username,users.role FROM comments INNER JOIN users ON comments.user_id = users.id WHERE recipe_id=(?)",recipe_id)
 
