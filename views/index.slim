@@ -3,9 +3,12 @@ h2 Welcome to recpDB!
 p You can browse recipes created by anyone below!
 
 section.all_recipes
-    -recipes.each do |recipe|
+    -recipes.each_with_index do |recipe,i|
         article.recipe
             a href="/recipes/#{recipe['id']}"
                 h3=recipe['title']
             a href="/users/#{recipe['user_id']}/profile"
                 p by #{recipe['username']}
+            section.genres
+                -genres[i].each do |genre|
+                    p #{genre['genre']},

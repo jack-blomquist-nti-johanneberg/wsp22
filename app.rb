@@ -3,6 +3,7 @@ require 'sinatra'
 require 'slim'
 require 'sqlite3'
 require 'bcrypt'
+require_relative './model.rb'
 
 enable :sessions
 
@@ -27,10 +28,16 @@ end
 
 get('/') do
     db = db_connection('db/db.db')
+    genres = []
 
-    recipes = db.execute("SELECT recipes.id,recipes.title,recipes.user_id,users.username FROM recipes INNER JOIN users ON recipes.user_id = users.id;")
+    recipes = db.execute("SELECT recipes.id,recipes.title,recipes.user_id,users.username FROM recipes INNER JOIN users ON recipes.user_id = users.id")
 
-    slim(:index, locals:{recipes:recipes})
+    recipes.each do |index|
+        genres << db.execute("SELECT genres.genre FROM recipes_genre_rel INNER JOIN genres ON recipes_genre_rel.genre_id = genres.id WHERE recipes_genre_rel.recipe_id=(?)", index['id'])
+    end
+    
+
+    slim(:index, locals:{recipes:recipes,genres:genres})
 end
 
 get('/error') do
@@ -98,7 +105,15 @@ post('/users/new') do
     redirect('/register')
 end
 
-post('/comment') do
+post('/login') do
+    db = db_connection('db/db.db')
+    username = params[:username]
+    password = params[:password]
+
+    login_check = db.execute("SELECT * FROM users WHERE username=(?)",username).first
+end
+
+post('/comment/new') do
     db = db_connection('db/db.db')
     comment = params[:comment]
     recipe_id = session[:recipe_id].to_i

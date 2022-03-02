@@ -27,7 +27,7 @@ input{
 
 .recipe{
     width: 150px;
-    height: 100px;
+    height: auto;
     background: salmon;
     border: 2px black solid;
     margin: 10px;
@@ -38,6 +38,16 @@ input{
     background: salmon;
 }
 
+.genres{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.genres *{
+    margin: 0;
+    margin-left: 5px;
+}
 .comment{
     display: flex;
     align-items: flex-start;
