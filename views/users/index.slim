@@ -1,7 +1,16 @@
 
 h2 #{users_info['username']}'s profile
-p role: #{users_info['role']}
-p recipes:
+
+h3 role: #{users_info['role']}
+
+-if request.path_info.split('/')[2].to_i == session[:active_user_id].to_i
+    h3 Write recipe:
+    -if session[:active_user_role] == "guest"
+        p You must be verified to write a recipe!
+        a href="/users/#{session[:active_user_id]}/edit" Verify me! 
+    -else
+        p recipe zone
+h3 recipes:
 section.all_recipes
     -users_recipes.each do |recipe|
         article.recipe

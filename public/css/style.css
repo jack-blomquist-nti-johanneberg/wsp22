@@ -11,6 +11,16 @@
     flex-direction: row;
 }
 
+#user_nav{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+#user_nav *{
+    margin-right: 5px;
+}
+
 input{
     background: salmon;
 }
@@ -48,6 +58,7 @@ input{
     margin: 0;
     margin-left: 5px;
 }
+
 .comment{
     display: flex;
     align-items: flex-start;

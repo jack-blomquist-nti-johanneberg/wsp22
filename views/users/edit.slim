@@ -1,0 +1,5 @@
+
+h2 Verify User
+form action="/users/#{session[:active_user_id]}/update" method="POST"
+    input type="text" name="email" placeholder="Enter email" autocomplete="off"
+    input type="submit" value="Verify me!"

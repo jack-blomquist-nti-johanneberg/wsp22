@@ -9,7 +9,7 @@ enable :sessions
 
 # setup
 
-clear_message_routes = ["/register", "/error"]
+clear_message_routes = ["/register","/error","/login"]
 
 def db_connection(route)
     db = SQLite3::Database.new(route)
@@ -87,6 +87,12 @@ get('/recipes/:id') do
     slim(:"recipes/index", locals:{recipes_info:recipe_data})
 end
 
+get('/users/:id/edit') do
+    user_id = params[:id]
+
+    slim(:"users/edit")
+end
+
 #post routes
 
 post('/users/new') do
@@ -111,6 +117,26 @@ post('/login') do
     password = params[:password]
 
     login_check = db.execute("SELECT * FROM users WHERE username=(?)",username).first
+
+    p login_check
+    
+    if BCrypt::Password.new(login_check['password']) == (password + "salt")
+        session[:active_user] = login_check['username']
+        session[:active_user_id] = login_check['id']
+        session[:active_user_role] = login_check['role']
+        redirect('/')
+    else
+        session[:message] = "Login failed: invalid input"
+        redirect('/login')
+    end
+end
+
+post('/logout') do
+    session[:active_user] = nil
+    session[:active_user_id] = nil
+    session[:active_user_role] = nil
+
+    redirect('/')
 end
 
 post('/comment/new') do
@@ -118,7 +144,18 @@ post('/comment/new') do
     comment = params[:comment]
     recipe_id = session[:recipe_id].to_i
 
-    db.execute("INSERT INTO comments(user_id,recipe_id,content) VALUES (?,?,?)",1,recipe_id,comment)
+    db.execute("INSERT INTO comments(user_id,recipe_id,content) VALUES (?,?,?)",session[:active_user_id].to_i,recipe_id,comment)
 
     redirect("/recipes/#{recipe_id}")
+end
+
+post("/users/:id/update") do
+    db = db_connection('db/db.db')
+    user_id = params[:id]
+
+    db.execute("UPDATE users SET role = 'verified' WHERE id=(?)",user_id)
+
+    session[:active_user_role] = db.execute("SELECT role FROM users WHERE id=(?)",user_id).first
+
+    redirect("/users/#{user_id}/profile")
 end
