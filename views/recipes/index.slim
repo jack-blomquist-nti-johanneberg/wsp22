@@ -14,6 +14,7 @@ nav
             a href="#st" Steps
         li 
             a href="#co" Comments 
+
 br
 
 h3#bg Background
@@ -26,10 +27,14 @@ ul
     -recipes_info['ingredients'].split(',').each do |ingredient|
         li=ingredient
 
+br
+
 h3#st Steps 
 ol
     -recipes_info['steps'].split(',').each do |step|
         li=step
+
+br
 
 h3#co Comments
 

@@ -9,7 +9,8 @@ enable :sessions
 
 # setup
 
-clear_message_routes = ["/register","/error","/login"]
+
+clear_message_routes = false
 
 def db_connection(route)
     db = SQLite3::Database.new(route)
@@ -19,8 +20,14 @@ end
 
 #clear session-cookies
 before do
-    if session[:message] != nil && not(clear_message_routes.include?(request.path_info))
-        session[:message] = nil
+    p clear_message_routes
+    if session[:message]
+        if clear_message_routes
+            session[:message] = nil
+            clear_message_routes = false
+        else
+            clear_message_routes = true
+        end
     end
 end
 
@@ -68,6 +75,26 @@ get('/users/:id/profile') do
     slim(:"users/index", locals:{users_info:user_data,users_recipes:user_recipes})
 end
 
+get('/users/:id/edit') do
+    user_id = params[:id]
+    if user_id.to_i == session[:active_user_id].to_i
+
+        slim(:"users/edit")
+    else
+        session[:message] = "you cannot edit someone elses profile!"
+        slim(:error)
+    end
+end
+
+get('/recipes/new') do
+    if session[:active_user_role] != "guest" && session[:active_user_role] != nil
+        slim(:"recipes/new")
+    else
+        session[:message] = "you have to be either verified or an admin to create recipes!"
+        redirect('/error')
+    end
+end
+
 get('/recipes/:id') do
     db = db_connection('db/db.db')
     recipe_id = params[:id]
@@ -75,22 +102,16 @@ get('/recipes/:id') do
     session[:recipe_id] = recipe_id
 
     recipe_data = db.execute("SELECT * FROM recipes WHERE id=(?)",recipe_id).first
-    recipe_data = recipe_data.merge(db.execute("SELECT username FROM users WHERE id=(?)",recipe_data['user_id']).first)
-
-    @comments = db.execute("SELECT comments.content,users.username,users.role FROM comments INNER JOIN users ON comments.user_id = users.id WHERE recipe_id=(?)",recipe_id)
-
     if recipe_data.nil?
         session[:message] = "recipe does not exist"
         redirect('/error')
     end
 
+    recipe_data = recipe_data.merge(db.execute("SELECT username FROM users WHERE id=(?)",recipe_data["user_id"]).first)
+
+    @comments = db.execute("SELECT comments.content,users.username,users.role FROM comments INNER JOIN users ON comments.user_id = users.id WHERE recipe_id=(?)",recipe_id)
+
     slim(:"recipes/index", locals:{recipes_info:recipe_data})
-end
-
-get('/users/:id/edit') do
-    user_id = params[:id]
-
-    slim(:"users/edit")
 end
 
 #post routes
@@ -118,15 +139,18 @@ post('/login') do
 
     login_check = db.execute("SELECT * FROM users WHERE username=(?)",username).first
 
-    p login_check
-    
-    if BCrypt::Password.new(login_check['password']) == (password + "salt")
-        session[:active_user] = login_check['username']
-        session[:active_user_id] = login_check['id']
-        session[:active_user_role] = login_check['role']
-        redirect('/')
+    if login_check != nil
+        if BCrypt::Password.new(login_check["password"]) == (password + "salt")
+            session[:active_user] = login_check['username']
+            session[:active_user_id] = login_check['id']
+            session[:active_user_role] = login_check['role']
+            redirect('/')
+        else
+            session[:message] = "Login failed: invalid input"
+            redirect('/login')
+        end
     else
-        session[:message] = "Login failed: invalid input"
+        session[:message] = "user does not exist"
         redirect('/login')
     end
 end
@@ -152,10 +176,16 @@ end
 post("/users/:id/update") do
     db = db_connection('db/db.db')
     user_id = params[:id]
+    email = params[:email]
 
-    db.execute("UPDATE users SET role = 'verified' WHERE id=(?)",user_id)
+    if email.include?("@")
+        db.execute("UPDATE users SET role = 'verified' WHERE id=(?)",user_id)
+        session[:active_user_role] = db.execute("SELECT role FROM users WHERE id=(?)",user_id).first
 
-    session[:active_user_role] = db.execute("SELECT role FROM users WHERE id=(?)",user_id).first
+        redirect("/users/#{user_id}/profile")
+    else
+        session[:message] = "you must enter an actual email adress"
 
-    redirect("/users/#{user_id}/profile")
+        redirect("/users/#{user_id}/edit")
+    end
 end

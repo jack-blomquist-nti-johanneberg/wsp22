@@ -1,1 +1,36 @@
 
+h2 Write a new recipe.
+
+form action="" method="GET"
+    h3 Title 
+    input type="text" name="title" placeholder="Enter title" autocomplete="off"
+
+    h3 Background
+    input type="text" name="background" placeholder="Enter bakground" autocomplete="off"
+
+    h3 Ingredients
+    p Seperate each ingredient with a comma!
+    input type="text" name="ingredients" placeholder="Enter the ingredients" autocomplete="off"
+
+    h3 Steps
+    p Seperate each step with a comma!
+    input type="text" name="steps" placeholder="Enter the steps" autocomplete="off"
+
+    h3 Tags
+    select name="genre1"
+        option value="easy" easy
+        option value="intermediate" intermediate
+        option value="hard" hard
+    select name="genre2"
+        option value="under 5 min" under 5 min
+        option value="under 15 min" under 15 min
+        option value="under 30 min" under 30 min
+        option value="above 30 min" above 30 min
+    select name="genre3"
+        option value="vegetarian" vegetarian
+        option value="vegan" vegan
+        option value="fish" fish
+        option value="meat" meat
+
+    h3 ...and done!
+    input type="submit" value="Publish the recipe!"

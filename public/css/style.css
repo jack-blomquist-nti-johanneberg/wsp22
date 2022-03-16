@@ -4,6 +4,10 @@
     color: whitesmoke;
 }
 
+select{
+    width: auto;
+    height: auto;
+}
 #startpage_nav{
     display: flex;
     align-items: center;
