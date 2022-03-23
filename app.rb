@@ -114,6 +114,23 @@ get('/recipes/:id') do
     slim(:"recipes/index", locals:{recipes_info:recipe_data})
 end
 
+get('/recipes/:id/edit') do
+    db = db_connection('db/db.db')
+    recipe_id = params[:id]
+
+    owner_check = db.execute("SELECT user_id FROM recipes WHERE id=(?)",recipe_id).first['user_id']
+
+    p owner_check
+
+    if session[:active_user_role] != "guest" && session[:active_user_role] != nil && owner_check == session[:active_user_id]
+        @recipe_name = db.execute("SELECT title FROM recipes WHERE id=(?)",recipe_id).first['title']
+        slim(:"recipes/edit")
+    else
+        session[:message] = "you have to be either verified or an admin to edit recipes! ...and also the owner of the recipe."
+        redirect('/error')
+    end
+end
+
 #post routes
 
 post('/users/new') do
@@ -179,7 +196,7 @@ post("/users/:id/update") do
     email = params[:email]
 
     if email.include?("@")
-        db.execute("UPDATE users SET role = 'verified' WHERE id=(?)",user_id)
+        db.execute("UPDATE users SET role='verified' WHERE id=(?)",user_id)
         session[:active_user_role] = db.execute("SELECT role FROM users WHERE id=(?)",user_id).first
 
         redirect("/users/#{user_id}/profile")
@@ -188,4 +205,28 @@ post("/users/:id/update") do
 
         redirect("/users/#{user_id}/edit")
     end
+end
+
+post("/recipes") do
+    db = db_connection('db/db.db')
+    title = params[:title].to_s
+    background = params[:background].to_s
+    ingredients = params[:ingredients].to_s
+    steps = params[:steps].to_s
+    genre1 = params[:genre1].to_s
+    genre2 = params[:genre2].to_s
+    genre3 = params[:genre3].to_s
+
+    db.execute("INSERT INTO recipes(title,info,ingredients,steps,user_id) VALUES (?,?,?,?,?)",title,background,ingredients,steps,session[:active_user_id])
+
+    latest_recipe = db.execute("SELECT id FROM recipes ORDER BY id DESC").first
+
+    genres_id = db.execute("SELECT id FROM genres WHERE genre IN (?,?,?)",genre1,genre2,genre3)
+
+    genres_id.each do |genre|
+        p genre['id']
+        db.execute("INSERT INTO recipes_genre_rel(recipe_id,genre_id) VALUES (?,?)",latest_recipe['id'],genre['id'])
+    end
+
+    redirect("/users/#{session[:active_user_id]}/profile")
 end
