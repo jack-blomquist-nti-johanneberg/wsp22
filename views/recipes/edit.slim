@@ -1,7 +1,7 @@
 
 h2 Editing recipe #{@recipe_name}
 
-form action="/recipes" method="POST"
+form action="/recipes/#{recipe_id}/update" method="POST"
     h3 New title 
     input type="text" name="title" placeholder="Enter the title" autocomplete="off"
 
@@ -32,5 +32,11 @@ form action="/recipes" method="POST"
         option value="fish" fish
         option value="meat" meat
 
-    h3 ...and done!
+    h3 Or... 
+    input type="checkbox" id="delete" name="delete"
+    label for="delete" Destroy recipe
+
+    br
+    br
+
     input type="submit" value="Re-publish the recipe!"

@@ -2,6 +2,9 @@
 h1 #{recipes_info['title']}
 p by #{recipes_info['username']}
 
+-if recipes_info['username'] == session[:active_user] || session[:active_user] == "admin"
+    a href="/recipes/#{recipes_info['id']}/edit" Edit recipe!
+
 h3 Take me to...
 
 nav
@@ -48,5 +51,5 @@ h3#co Comments
 ul
     -@comments.each do |comment|
         li.comment
-            p From: #{comment['username']} (#{comment['role']})
+            p From: #{comment['username']} (#{comment['role']}) #{comment['date']}
             p=comment['content']

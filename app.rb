@@ -20,7 +20,6 @@ end
 
 #clear session-cookies
 before do
-    p clear_message_routes
     if session[:message]
         if clear_message_routes
             session[:message] = nil
@@ -109,7 +108,7 @@ get('/recipes/:id') do
 
     recipe_data = recipe_data.merge(db.execute("SELECT username FROM users WHERE id=(?)",recipe_data["user_id"]).first)
 
-    @comments = db.execute("SELECT comments.content,users.username,users.role FROM comments INNER JOIN users ON comments.user_id = users.id WHERE recipe_id=(?)",recipe_id)
+    @comments = db.execute("SELECT comments.content,users.username,users.role,comments.date FROM comments INNER JOIN users ON comments.user_id = users.id WHERE recipe_id=(?)",recipe_id)
 
     slim(:"recipes/index", locals:{recipes_info:recipe_data})
 end
@@ -120,11 +119,9 @@ get('/recipes/:id/edit') do
 
     owner_check = db.execute("SELECT user_id FROM recipes WHERE id=(?)",recipe_id).first['user_id']
 
-    p owner_check
-
     if session[:active_user_role] != "guest" && session[:active_user_role] != nil && owner_check == session[:active_user_id]
         @recipe_name = db.execute("SELECT title FROM recipes WHERE id=(?)",recipe_id).first['title']
-        slim(:"recipes/edit")
+        slim(:"recipes/edit",locals:{recipe_id:recipe_id})
     else
         session[:message] = "you have to be either verified or an admin to edit recipes! ...and also the owner of the recipe."
         redirect('/error')
@@ -185,7 +182,10 @@ post('/comment/new') do
     comment = params[:comment]
     recipe_id = session[:recipe_id].to_i
 
-    db.execute("INSERT INTO comments(user_id,recipe_id,content) VALUES (?,?,?)",session[:active_user_id].to_i,recipe_id,comment)
+    date = Time.now.strftime("%Y-%b-%d")
+    p date
+
+    db.execute("INSERT INTO comments(user_id,recipe_id,content,date) VALUES (?,?,?,?)",session[:active_user_id].to_i,recipe_id,comment,date)
 
     redirect("/recipes/#{recipe_id}")
 end
@@ -224,9 +224,39 @@ post("/recipes") do
     genres_id = db.execute("SELECT id FROM genres WHERE genre IN (?,?,?)",genre1,genre2,genre3)
 
     genres_id.each do |genre|
-        p genre['id']
         db.execute("INSERT INTO recipes_genre_rel(recipe_id,genre_id) VALUES (?,?)",latest_recipe['id'],genre['id'])
     end
 
     redirect("/users/#{session[:active_user_id]}/profile")
+end
+
+post('/recipes/:id/update') do
+    db = db_connection('db/db.db')
+    id = params[:id].to_i
+    title = params[:title].to_s
+    background = params[:background].to_s
+    ingredients = params[:ingredients].to_s
+    steps = params[:steps].to_s
+    genre1 = params[:genre1].to_s
+    genre2 = params[:genre2].to_s
+    genre3 = params[:genre3].to_s
+    delete = params[:delete].to_s
+
+    if delete == "on"
+        db.execute("DELETE FROM recipes WHERE id=(?)",id)
+
+        db.execute("DELETE FROM recipes_genre_rel WHERE recipe_id=(?)",id)
+    else
+        db.execute("UPDATE recipes SET title=(?),info=(?),ingredients=(?),steps=(?) WHERE id=(?)",title,background,ingredients,steps,id)
+
+        genres_id = db.execute("SELECT id FROM genres WHERE genre IN (?,?,?)",genre1,genre2,genre3)
+
+        rel_id = db.execute("SELECT id FROM recipes_genre_rel WHERE recipe_id=(?)",id)
+
+        genres_id.each_with_index do |genre,index|
+            db.execute("UPDATE recipes_genre_rel SET genre_id=(?) WHERE recipe_id=(?) AND id=(?)",genre['id'],id,rel_id[index]['id'])
+        end
+    end
+
+    redirect("/")
 end
