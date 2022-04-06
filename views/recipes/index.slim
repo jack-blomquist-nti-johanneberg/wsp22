@@ -1,6 +1,6 @@
 
 h1 #{recipes_info['title']}
-p by #{recipes_info['username']}
+p by #{recipes_info['username']} (#{recipes_info['role']})
 
 -if recipes_info['username'] == session[:active_user] || session[:active_user] == "admin"
     a href="/recipes/#{recipes_info['id']}/edit" Edit recipe!

@@ -2,6 +2,9 @@
 h2 #{users_info['username']}'s profile
 
 h3 role: #{users_info['role']}
+
+a href="/users/#{session[:active_user_id]}/edit" Edit profile
+
 -if request.path_info.split('/')[2].to_i == session[:active_user_id].to_i
     h3 Write recipe:
     -if session[:active_user_role] == "guest"

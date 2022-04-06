@@ -1,5 +1,20 @@
 
 h2 Verify User
+-if session[:active_user_role] == "guest"
+    form action="/users/#{session[:active_user_id]}/update" method="POST"
+        input type="text" name="email" placeholder="Enter email" autocomplete="off"
+        input type="submit" value="Verify me!"
+-else
+    p You are already verified!
+
+h2 Change username
 form action="/users/#{session[:active_user_id]}/update" method="POST"
-    input type="text" name="email" placeholder="Enter email" autocomplete="off"
-    input type="submit" value="Verify me!"
+    input type="text" name="username" placeholder="Enter your new username" autocomplete="off"
+    br
+    br
+    input type="checkbox" id="delete" name="delete"
+    label for="delete" Destroy user
+    br
+    br
+    input type="submit" value="Update profile"
+

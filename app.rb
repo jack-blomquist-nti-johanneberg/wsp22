@@ -8,14 +8,34 @@ require_relative './model.rb'
 enable :sessions
 
 # setup
-
-
 clear_message_routes = false
 
 def db_connection(route)
     db = SQLite3::Database.new(route)
     db.results_as_hash = true
     return db
+end
+
+def update_active_user(name,id,role)
+    session[:active_user] = name
+    session[:active_user_id] = id
+    session[:active_user_role] = role
+    return nil
+end
+
+def ghost_users(array)
+    db = db_connection('db/db.db')
+    array.each do |ary|
+        name = db.execute("SELECT username FROM users WHERE id=(?)",ary['user_id']).first
+        role = db.execute("SELECT role FROM users WHERE id=(?)",ary['user_id']).first
+        if name != nil
+            ary["username"] = name["username"]
+            ary["role"] = role["role"]
+        else
+            ary["username"] = "an echo of the past"
+            ary["role"] = "deleted"
+        end
+    end
 end
 
 #clear session-cookies
@@ -36,7 +56,10 @@ get('/') do
     db = db_connection('db/db.db')
     genres = []
 
-    recipes = db.execute("SELECT recipes.id,recipes.title,recipes.user_id,users.username FROM recipes INNER JOIN users ON recipes.user_id = users.id")
+    # db.execute("SELECT recipes.id,recipes.title,recipes.user_id,users.username FROM recipes INNER JOIN users ON recipes.user_id = users.id")
+    recipes = db.execute("SELECT id,title,user_id FROM recipes")
+
+    ghost_users(recipes)
 
     recipes.each do |index|
         genres << db.execute("SELECT genres.genre FROM recipes_genre_rel INNER JOIN genres ON recipes_genre_rel.genre_id = genres.id WHERE recipes_genre_rel.recipe_id=(?)", index['id'])
@@ -100,15 +123,16 @@ get('/recipes/:id') do
 
     session[:recipe_id] = recipe_id
 
-    recipe_data = db.execute("SELECT * FROM recipes WHERE id=(?)",recipe_id).first
+    recipe_data = db.execute("SELECT * FROM recipes WHERE id=(?)",recipe_id)
     if recipe_data.nil?
         session[:message] = "recipe does not exist"
         redirect('/error')
     end
+    ghost_users(recipe_data)
+    recipe_data = recipe_data.first
 
-    recipe_data = recipe_data.merge(db.execute("SELECT username FROM users WHERE id=(?)",recipe_data["user_id"]).first)
-
-    @comments = db.execute("SELECT comments.content,users.username,users.role,comments.date FROM comments INNER JOIN users ON comments.user_id = users.id WHERE recipe_id=(?)",recipe_id)
+    @comments = db.execute("SELECT content,date,user_id FROM comments WHERE recipe_id=(?)",recipe_id)
+    ghost_users(@comments)
 
     slim(:"recipes/index", locals:{recipes_info:recipe_data})
 end
@@ -123,7 +147,7 @@ get('/recipes/:id/edit') do
         @recipe_name = db.execute("SELECT title FROM recipes WHERE id=(?)",recipe_id).first['title']
         slim(:"recipes/edit",locals:{recipe_id:recipe_id})
     else
-        session[:message] = "you have to be either verified or an admin to edit recipes! ...and also the owner of the recipe."
+        session[:message] = "you have to be either be an admin or the owner to edit this recipe"
         redirect('/error')
     end
 end
@@ -140,6 +164,7 @@ post('/users/new') do
         salted_password = password + "salt"
         crypted_password = BCrypt::Password.create(salted_password)
         db.execute("INSERT INTO users(username,password,role) VALUES (?,?,?)",username,crypted_password,"guest")
+        session[:message] = "User created!"
     else
         session[:message] = "Register failed: password not equal to ver_password"
     end
@@ -155,9 +180,7 @@ post('/login') do
 
     if login_check != nil
         if BCrypt::Password.new(login_check["password"]) == (password + "salt")
-            session[:active_user] = login_check['username']
-            session[:active_user_id] = login_check['id']
-            session[:active_user_role] = login_check['role']
+            update_active_user(login_check['username'],login_check['id'],login_check['role'])
             redirect('/')
         else
             session[:message] = "Login failed: invalid input"
@@ -170,9 +193,7 @@ post('/login') do
 end
 
 post('/logout') do
-    session[:active_user] = nil
-    session[:active_user_id] = nil
-    session[:active_user_role] = nil
+    update_active_user(nil,nil,nil)
 
     redirect('/')
 end
@@ -194,16 +215,30 @@ post("/users/:id/update") do
     db = db_connection('db/db.db')
     user_id = params[:id]
     email = params[:email]
+    new_username = params[:username]
+    delete_user = params[:delete]
 
-    if email.include?("@")
-        db.execute("UPDATE users SET role='verified' WHERE id=(?)",user_id)
-        session[:active_user_role] = db.execute("SELECT role FROM users WHERE id=(?)",user_id).first
+    if email != nil
+        if email.include?("@")
+            db.execute("UPDATE users SET role='verified' WHERE id=(?)",user_id)
+            db.execute("UPDATE users SET email=(?) WHERE id=(?)",email,user_id)
+            session[:active_user_role] = db.execute("SELECT role FROM users WHERE id=(?)",user_id).first
+
+            redirect("/users/#{user_id}/profile")
+        else
+            session[:message] = "you must enter an actual email adress"
+
+            redirect("/users/#{user_id}/edit")
+        end
+    elsif delete_user == "on"
+        db.execute("DELETE FROM users WHERE id=(?)",user_id)
+        update_active_user(nil,nil,nil)
+        redirect("/")
+    else
+        db.execute("UPDATE users SET username=(?) WHERE id=(?)",new_username,user_id)
+        session[:active_user] = new_username
 
         redirect("/users/#{user_id}/profile")
-    else
-        session[:message] = "you must enter an actual email adress"
-
-        redirect("/users/#{user_id}/edit")
     end
 end
 
@@ -240,9 +275,9 @@ post('/recipes/:id/update') do
     genre1 = params[:genre1].to_s
     genre2 = params[:genre2].to_s
     genre3 = params[:genre3].to_s
-    delete = params[:delete].to_s
+    delete_recipe = params[:delete].to_s
 
-    if delete == "on"
+    if delete_recipe == "on"
         db.execute("DELETE FROM recipes WHERE id=(?)",id)
 
         db.execute("DELETE FROM recipes_genre_rel WHERE recipe_id=(?)",id)
