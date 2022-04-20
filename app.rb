@@ -4,11 +4,14 @@ require 'slim'
 require 'sqlite3'
 require 'bcrypt'
 require_relative './model.rb'
+$VERBOSE = nil
 
 enable :sessions
 
 # setup
+
 clear_message_routes = false
+@@stress_array = []
 
 def db_connection(route)
     db = SQLite3::Database.new(route)
@@ -38,7 +41,29 @@ def ghost_users(array)
     end
 end
 
+def length_check(string,len)
+    if string.length <= len
+        return true
+    else
+        return false
+    end
+end
+
+def time_check(time_array)
+    if time_array.length == 2
+        @@stress_array = []
+        if time_array[0] - time_array[-1] < 5
+            return true
+        else
+            return false
+        end
+    else
+        return false
+    end
+end
+
 #clear session-cookies
+
 before do
     if session[:message]
         if clear_message_routes
@@ -56,7 +81,6 @@ get('/') do
     db = db_connection('db/db.db')
     genres = []
 
-    # db.execute("SELECT recipes.id,recipes.title,recipes.user_id,users.username FROM recipes INNER JOIN users ON recipes.user_id = users.id")
     recipes = db.execute("SELECT id,title,user_id FROM recipes")
 
     ghost_users(recipes)
@@ -90,7 +114,7 @@ get('/users/:id/profile') do
     user_recipes = db.execute("SELECT title,id FROM recipes WHERE user_id=(?)",user_id)
 
     if user_data.nil?
-        session[:message] = "user does not exist"
+        session[:message] = "Re-routing failed: user does not exist"
         redirect('/error')
     end
 
@@ -103,7 +127,7 @@ get('/users/:id/edit') do
 
         slim(:"users/edit")
     else
-        session[:message] = "you cannot edit someone elses profile!"
+        session[:message] = "Re-routing failed: you cannot edit someone elses profile!"
         slim(:error)
     end
 end
@@ -112,7 +136,7 @@ get('/recipes/new') do
     if session[:active_user_role] != "guest" && session[:active_user_role] != nil
         slim(:"recipes/new")
     else
-        session[:message] = "you have to be either verified or an admin to create recipes!"
+        session[:message] = "Re-routing failed: you have to be either verified or an admin to create recipes!"
         redirect('/error')
     end
 end
@@ -125,7 +149,7 @@ get('/recipes/:id') do
 
     recipe_data = db.execute("SELECT * FROM recipes WHERE id=(?)",recipe_id)
     if recipe_data.nil?
-        session[:message] = "recipe does not exist"
+        session[:message] = "Re-routing failed: recipe does not exist"
         redirect('/error')
     end
     ghost_users(recipe_data)
@@ -147,7 +171,7 @@ get('/recipes/:id/edit') do
         @recipe_name = db.execute("SELECT title FROM recipes WHERE id=(?)",recipe_id).first['title']
         slim(:"recipes/edit",locals:{recipe_id:recipe_id})
     else
-        session[:message] = "you have to be either be an admin or the owner to edit this recipe"
+        session[:message] = "Re-routing failed: you have to be either be an admin or the owner to edit this recipe"
         redirect('/error')
     end
 end
@@ -160,15 +184,34 @@ post('/users/new') do
     password = params[:password]
     ver_password = params[:ver_password]
 
+    @@stress_array << Time.now.to_i
+    p @@stress_array
+
+    if not(length_check(username,33))
+        session[:message] = "Register failed: username too long, it must be shorter than 33 characters"
+        redirect('/register')
+    end
+
+    if db.execute("SELECT username FROM users WHERE username=(?)",username).first != nil
+        session[:message] = "Register failed: name already taken!"
+        redirect('/register')
+    end
+
+    if time_check(@@stress_array)
+        session[:message] = "Register failed: too much pressure"
+        redirect('/register')
+    end
+
     if password == ver_password
         salted_password = password + "salt"
         crypted_password = BCrypt::Password.create(salted_password)
         db.execute("INSERT INTO users(username,password,role) VALUES (?,?,?)",username,crypted_password,"guest")
         session[:message] = "User created!"
+        redirect('/login')
     else
         session[:message] = "Register failed: password not equal to ver_password"
+        redirect('/register')
     end
-    redirect('/register')
 end
 
 post('/login') do
@@ -187,7 +230,7 @@ post('/login') do
             redirect('/login')
         end
     else
-        session[:message] = "user does not exist"
+        session[:message] = "Login failed: user does not exist"
         redirect('/login')
     end
 end
@@ -198,13 +241,12 @@ post('/logout') do
     redirect('/')
 end
 
-post('/comment/new') do
+post('/comment') do
     db = db_connection('db/db.db')
     comment = params[:comment]
     recipe_id = session[:recipe_id].to_i
 
     date = Time.now.strftime("%Y-%b-%d")
-    p date
 
     db.execute("INSERT INTO comments(user_id,recipe_id,content,date) VALUES (?,?,?,?)",session[:active_user_id].to_i,recipe_id,comment,date)
 
@@ -226,10 +268,15 @@ post("/users/:id/update") do
 
             redirect("/users/#{user_id}/profile")
         else
-            session[:message] = "you must enter an actual email adress"
+            session[:message] = "User update failed: you must enter an actual email adress"
 
             redirect("/users/#{user_id}/edit")
         end
+    end
+    
+    if not(length_check(new_username,33))
+        session[:message] = "User update failed: new username too long, it must be shorter than 33 characters"
+        redirect("/users/#{user_id}/edit")
     elsif delete_user == "on"
         db.execute("DELETE FROM users WHERE id=(?)",user_id)
         update_active_user(nil,nil,nil)
@@ -251,6 +298,11 @@ post("/recipes") do
     genre1 = params[:genre1].to_s
     genre2 = params[:genre2].to_s
     genre3 = params[:genre3].to_s
+
+    if login_check(title,45)
+        session[:message] = "New recipe failed: title is too long, it must be shorter than 45 characters"
+        redirect("/recipes/new")
+    end
 
     db.execute("INSERT INTO recipes(title,info,ingredients,steps,user_id) VALUES (?,?,?,?,?)",title,background,ingredients,steps,session[:active_user_id])
 

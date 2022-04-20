@@ -81,3 +81,7 @@ input{
     color: black;
     margin: 2px;
 }
+
+#reg_log_input{
+    width: 300px;
+}
