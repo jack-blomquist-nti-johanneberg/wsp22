@@ -9,12 +9,15 @@ h2 Verify User
 
 h2 Change username
 form action="/users/#{session[:active_user_id]}/update" method="POST"
-    input type="text" name="username" value="#{session[:active_user]}" placeholder="Enter your new username" autocomplete="off"
-    br
-    br
-    input type="checkbox" id="delete" name="delete"
-    label for="delete" Destroy user
+    input type="text" name="username" value="#{session[:active_user]}" placeholder="Enter your new username" autocomplete="off" required=""
     br
     br
     input type="submit" value="Update profile"
+
+form action="/users/#{session[:active_user_id]}/delete" method="POST"
+    h3 Destroy profile
+    input type="checkbox" id="delete" name="delete"
+    label for="delete" Destroy user
+    br
+    input type="submit" value="Destroy user"
 

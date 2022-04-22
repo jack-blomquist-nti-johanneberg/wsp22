@@ -1,0 +1,10 @@
+
+h2 Register
+
+p Register and show the world how to#{@register_texts[rand(0..(@register_texts.length-1))]}
+
+form action="/users" method="POST"
+    input#reg_log_input type="text" name="username" placeholder="Enter username, max 33 letters" autocomplete="off" required=""
+    input#reg_log_input type="password" name="password" placeholder="Enter password" required=""
+    input#reg_log_input type="password" name="ver_password" placeholder="Re-enter password" required=""
+    input type="submit" value="Register"

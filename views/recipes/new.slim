@@ -3,18 +3,18 @@ h2 Write a new recipe.
 
 form action="/recipes" method="POST"
     h3 Title 
-    input type="text" name="title" placeholder="Enter the title" autocomplete="off"
+    input type="text" name="title" placeholder="Enter the title" autocomplete="off" required=""
 
     h3 Background
-    input type="text" name="background" placeholder="Enter the bakground" autocomplete="off"
+    input type="text" name="background" placeholder="Enter the bakground" autocomplete="off" required=""
 
     h3 Ingredients
     p Seperate each ingredient with a comma!
-    input type="text" name="ingredients" placeholder="Enter the ingredients" autocomplete="off"
+    input type="text" name="ingredients" placeholder="Enter the ingredients" autocomplete="off" required=""
 
     h3 Steps
     p Seperate each step with a comma!
-    input type="text" name="steps" placeholder="Enter the steps" autocomplete="off"
+    input type="text" name="steps" placeholder="Enter the steps" autocomplete="off" required=""
 
     h3 Tags
     select name="genre1"

@@ -4,7 +4,6 @@ require 'slim'
 require 'sqlite3'
 require 'bcrypt'
 require_relative './model.rb'
-$VERBOSE = nil
 
 enable :sessions
 
@@ -42,17 +41,17 @@ def ghost_users(array)
 end
 
 def length_check(string,len)
-    if string.length <= len
+    if string.length >= len
         return true
     else
         return false
     end
 end
 
-def time_check(time_array)
+def time_check(time_array, time)
     if time_array.length == 2
         $stress_array = []
-        if time_array[-1] - time_array[0] < 6
+        if time_array[-1] - time_array[0] < time
             return true
         else
             return false
@@ -99,7 +98,7 @@ end
 
 get('/register') do
     @register_texts = [" make tasty pancakes!"," make bread!"," live in harmony!","... um... cook rice?"," impress family and friends!", " avoid unforeseen consequences...!"]
-    slim(:register)
+    slim(:"users/new")
 end
 
 get('/login') do
@@ -167,7 +166,7 @@ get('/recipes/:id/edit') do
 
     owner_check = db.execute("SELECT user_id FROM recipes WHERE id=(?)",recipe_id).first['user_id']
 
-    if session[:active_user_role] != "guest" && session[:active_user_role] != nil && owner_check == session[:active_user_id]
+    if owner_check == session[:active_user_id] || session[:active_user_role] == "admin"
         @recipe_name = db.execute("SELECT title FROM recipes WHERE id=(?)",recipe_id).first['title']
         slim(:"recipes/edit",locals:{recipe_id:recipe_id})
     else
@@ -178,16 +177,13 @@ end
 
 #post routes
 
-post('/users/new') do
+post('/users') do
     db = db_connection('db/db.db')
     username = params[:username]
     password = params[:password]
     ver_password = params[:ver_password]
 
-    $stress_array << Time.now.to_i
-    p $stress_array
-
-    if not(length_check(username,33))
+    if length_check(username,33)
         session[:message] = "Register failed: username too long, it must be shorter than 33 characters"
         redirect('/register')
     end
@@ -197,7 +193,10 @@ post('/users/new') do
         redirect('/register')
     end
 
-    if time_check($stress_array)
+    $stress_array << Time.now.to_i
+    p $stress_array
+
+    if time_check($stress_array,6)
         session[:message] = "Register failed: too much pressure"
         redirect('/register')
     end
@@ -241,24 +240,11 @@ post('/logout') do
     redirect('/')
 end
 
-post('/comment') do
-    db = db_connection('db/db.db')
-    comment = params[:comment]
-    recipe_id = session[:recipe_id].to_i
-
-    date = Time.now.strftime("%Y-%b-%d")
-
-    db.execute("INSERT INTO comments(user_id,recipe_id,content,date) VALUES (?,?,?,?)",session[:active_user_id].to_i,recipe_id,comment,date)
-
-    redirect("/recipes/#{recipe_id}")
-end
-
-post("/users/:id/update") do
+post('/users/:id/update') do
     db = db_connection('db/db.db')
     user_id = params[:id]
     email = params[:email]
     new_username = params[:username]
-    delete_user = params[:delete]
 
     if email != nil
         if email.include?("@")
@@ -273,14 +259,10 @@ post("/users/:id/update") do
             redirect("/users/#{user_id}/edit")
         end
     end
-    
-    if not(length_check(new_username,33))
+
+    if length_check(new_username,33)
         session[:message] = "User update failed: new username too long, it must be shorter than 33 characters"
         redirect("/users/#{user_id}/edit")
-    elsif delete_user == "on"
-        db.execute("DELETE FROM users WHERE id=(?)",user_id)
-        update_active_user(nil,nil,nil)
-        redirect("/")
     else
         db.execute("UPDATE users SET username=(?) WHERE id=(?)",new_username,user_id)
         session[:active_user] = new_username
@@ -289,7 +271,29 @@ post("/users/:id/update") do
     end
 end
 
-post("/recipes") do
+post('/users/:id/delete') do
+    db = db_connection('db/db.db')
+    id = params[:id].to_i
+
+    db.execute("DELETE FROM users WHERE id=(?)",id)
+    update_active_user(nil,nil,nil)
+
+    redirect('/')
+end
+
+post('/comment') do
+    db = db_connection('db/db.db')
+    comment = params[:comment]
+    recipe_id = session[:recipe_id].to_i
+
+    date = Time.now.strftime("%Y-%b-%d")
+
+    db.execute("INSERT INTO comments(user_id,recipe_id,content,date) VALUES (?,?,?,?)",session[:active_user_id].to_i,recipe_id,comment,date)
+
+    redirect("/recipes/#{recipe_id}")
+end
+
+post('/recipes') do
     db = db_connection('db/db.db')
     title = params[:title].to_s
     background = params[:background].to_s
@@ -299,9 +303,17 @@ post("/recipes") do
     genre2 = params[:genre2].to_s
     genre3 = params[:genre3].to_s
 
-    if login_check(title,45)
+    if length_check(title,45)
         session[:message] = "New recipe failed: title is too long, it must be shorter than 45 characters"
-        redirect("/recipes/new")
+        redirect('/recipes/new')
+    end
+
+    $stress_array << Time.now.to_i
+    p $stress_array
+
+    if time_check($stress_array,20)
+        session[:message] = "New recipe failed: too much pressure"
+        redirect('/recipes/new')
     end
 
     db.execute("INSERT INTO recipes(title,info,ingredients,steps,user_id) VALUES (?,?,?,?,?)",title,background,ingredients,steps,session[:active_user_id])
@@ -327,23 +339,26 @@ post('/recipes/:id/update') do
     genre1 = params[:genre1].to_s
     genre2 = params[:genre2].to_s
     genre3 = params[:genre3].to_s
-    delete_recipe = params[:delete].to_s
 
-    if delete_recipe == "on"
-        db.execute("DELETE FROM recipes WHERE id=(?)",id)
+    db.execute("UPDATE recipes SET title=(?),info=(?),ingredients=(?),steps=(?) WHERE id=(?)",title,background,ingredients,steps,id)
 
-        db.execute("DELETE FROM recipes_genre_rel WHERE recipe_id=(?)",id)
-    else
-        db.execute("UPDATE recipes SET title=(?),info=(?),ingredients=(?),steps=(?) WHERE id=(?)",title,background,ingredients,steps,id)
+    genres_id = db.execute("SELECT id FROM genres WHERE genre IN (?,?,?)",genre1,genre2,genre3)
 
-        genres_id = db.execute("SELECT id FROM genres WHERE genre IN (?,?,?)",genre1,genre2,genre3)
+    rel_id = db.execute("SELECT id FROM recipes_genre_rel WHERE recipe_id=(?)",id)
 
-        rel_id = db.execute("SELECT id FROM recipes_genre_rel WHERE recipe_id=(?)",id)
-
-        genres_id.each_with_index do |genre,index|
-            db.execute("UPDATE recipes_genre_rel SET genre_id=(?) WHERE recipe_id=(?) AND id=(?)",genre['id'],id,rel_id[index]['id'])
-        end
+    genres_id.each_with_index do |genre,index|
+        db.execute("UPDATE recipes_genre_rel SET genre_id=(?) WHERE recipe_id=(?) AND id=(?)",genre['id'],id,rel_id[index]['id'])
     end
 
-    redirect("/")
+    redirect('/')
+end
+
+post ('/recipes/:id/delete') do
+    db = db_connection('db/db.db')
+    id = params[:id].to_i
+
+    db.execute("DELETE FROM recipes WHERE id=(?)",id)
+    db.execute("DELETE FROM recipes_genre_rel WHERE recipe_id=(?)",id)
+
+    redirect('/')
 end

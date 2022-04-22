@@ -3,18 +3,18 @@ h2 Editing recipe #{@recipe_name}
 
 form action="/recipes/#{recipe_id}/update" method="POST"
     h3 New title 
-    input type="text" name="title" placeholder="Enter the title" autocomplete="off"
+    input type="text" name="title" placeholder="Enter the title" autocomplete="off" required=""
 
     h3 New background
-    input type="text" name="background" placeholder="Enter the bakground" autocomplete="off"
+    input type="text" name="background" placeholder="Enter the bakground" autocomplete="off" required=""
 
     h3 New ingredients
     p Seperate each ingredient with a comma!
-    input type="text" name="ingredients" placeholder="Enter the ingredients" autocomplete="off"
+    input type="text" name="ingredients" placeholder="Enter the ingredients" autocomplete="off" required=""
 
     h3 New steps
     p Seperate each step with a comma!
-    input type="text" name="steps" placeholder="Enter the steps" autocomplete="off"
+    input type="text" name="steps" placeholder="Enter the steps" autocomplete="off" required=""
 
     h3 New tags
     select name="genre1"
@@ -31,12 +31,13 @@ form action="/recipes/#{recipe_id}/update" method="POST"
         option value="vegan" vegan
         option value="fish" fish
         option value="meat" meat
+    br
+    br
+    input type="submit" value="Re-publish the recipe!"
 
-    h3 Or... 
+form action="/recipes/#{recipe_id}/delete" method="POST"
+    h3 Destroy recipe
     input type="checkbox" id="delete" name="delete"
     label for="delete" Destroy recipe
-
     br
-    br
-
-    input type="submit" value="Re-publish the recipe!"
+    input type="submit" value="Destroy the recipe"
