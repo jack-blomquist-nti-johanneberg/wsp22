@@ -11,7 +11,7 @@ enable :sessions
 # setup
 
 clear_message_routes = false
-@@stress_array = []
+$stress_array = []
 
 def db_connection(route)
     db = SQLite3::Database.new(route)
@@ -51,8 +51,8 @@ end
 
 def time_check(time_array)
     if time_array.length == 2
-        @@stress_array = []
-        if time_array[0] - time_array[-1] < 5
+        $stress_array = []
+        if time_array[-1] - time_array[0] < 6
             return true
         else
             return false
@@ -184,8 +184,8 @@ post('/users/new') do
     password = params[:password]
     ver_password = params[:ver_password]
 
-    @@stress_array << Time.now.to_i
-    p @@stress_array
+    $stress_array << Time.now.to_i
+    p $stress_array
 
     if not(length_check(username,33))
         session[:message] = "Register failed: username too long, it must be shorter than 33 characters"
@@ -197,7 +197,7 @@ post('/users/new') do
         redirect('/register')
     end
 
-    if time_check(@@stress_array)
+    if time_check($stress_array)
         session[:message] = "Register failed: too much pressure"
         redirect('/register')
     end
