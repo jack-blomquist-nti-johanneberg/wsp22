@@ -10,56 +10,6 @@ enable :sessions
 # setup
 
 clear_message_routes = false
-$stress_array = []
-
-def db_connection(route)
-    db = SQLite3::Database.new(route)
-    db.results_as_hash = true
-    return db
-end
-
-def update_active_user(name,id,role)
-    session[:active_user] = name
-    session[:active_user_id] = id
-    session[:active_user_role] = role
-    return nil
-end
-
-def ghost_users(array)
-    db = db_connection('db/db.db')
-    array.each do |ary|
-        name = db.execute("SELECT username FROM users WHERE id=(?)",ary['user_id']).first
-        role = db.execute("SELECT role FROM users WHERE id=(?)",ary['user_id']).first
-        if name != nil
-            ary["username"] = name["username"]
-            ary["role"] = role["role"]
-        else
-            ary["username"] = "an echo of the past"
-            ary["role"] = "deleted"
-        end
-    end
-end
-
-def length_check(string,len)
-    if string.length >= len
-        return true
-    else
-        return false
-    end
-end
-
-def time_check(time_array, time)
-    if time_array.length == 2
-        $stress_array = []
-        if time_array[-1] - time_array[0] < time
-            return true
-        else
-            return false
-        end
-    else
-        return false
-    end
-end
 
 #clear session-cookies
 
@@ -77,19 +27,9 @@ end
 #get routes
 
 get('/') do
-    db = db_connection('db/db.db')
-    genres = []
+    keyword = params[:search]
 
-    recipes = db.execute("SELECT id,title,user_id FROM recipes")
-
-    ghost_users(recipes)
-
-    recipes.each do |index|
-        genres << db.execute("SELECT genres.genre FROM recipes_genre_rel INNER JOIN genres ON recipes_genre_rel.genre_id = genres.id WHERE recipes_genre_rel.recipe_id=(?)", index['id'])
-    end
-    
-
-    slim(:index, locals:{recipes:recipes,genres:genres})
+    slim(:index, locals:{recipes:ghost_users(get_recipes(keyword)[0]),genres:get_recipes(keyword)[1]})
 end
 
 get('/error') do
@@ -105,19 +45,10 @@ get('/login') do
     slim(:login)
 end
 
-get('/users/:id/profile') do
-    db = db_connection('db/db.db')
+get('/users/:id') do
     user_id = params[:id]
 
-    user_data = db.execute("SELECT * FROM users WHERE id=(?)",user_id).first
-    user_recipes = db.execute("SELECT title,id FROM recipes WHERE user_id=(?)",user_id)
-
-    if user_data.nil?
-        session[:message] = "Re-routing failed: user does not exist"
-        redirect('/error')
-    end
-
-    slim(:"users/index", locals:{users_info:user_data,users_recipes:user_recipes})
+    slim(:"users/index", locals:{users_info:get_user(user_id)[0],users_recipes:get_user(user_id)[1]})
 end
 
 get('/users/:id/edit') do
@@ -141,33 +72,21 @@ get('/recipes/new') do
 end
 
 get('/recipes/:id') do
-    db = db_connection('db/db.db')
     recipe_id = params[:id]
-
     session[:recipe_id] = recipe_id
 
-    recipe_data = db.execute("SELECT * FROM recipes WHERE id=(?)",recipe_id)
-    if recipe_data.nil?
-        session[:message] = "Re-routing failed: recipe does not exist"
-        redirect('/error')
-    end
-    ghost_users(recipe_data)
-    recipe_data = recipe_data.first
+    get_comments(recipe_id)
 
-    @comments = db.execute("SELECT content,date,user_id FROM comments WHERE recipe_id=(?)",recipe_id)
-    ghost_users(@comments)
-
-    slim(:"recipes/index", locals:{recipes_info:recipe_data})
+    slim(:"recipes/index", locals:{recipes_info:get_recipe_data(recipe_id)})
 end
 
 get('/recipes/:id/edit') do
-    db = db_connection('db/db.db')
     recipe_id = params[:id]
 
-    owner_check = db.execute("SELECT user_id FROM recipes WHERE id=(?)",recipe_id).first['user_id']
+    owner_check(recipe_id)['user_id']
 
-    if owner_check == session[:active_user_id] || session[:active_user_role] == "admin"
-        @recipe_name = db.execute("SELECT title FROM recipes WHERE id=(?)",recipe_id).first['title']
+    if owner_check(recipe_id)['user_id'] == session[:active_user_id] || session[:active_user_role] == "admin"
+        @recipe_name = owner_check(recipe_id)['title']
         slim(:"recipes/edit",locals:{recipe_id:recipe_id})
     else
         session[:message] = "Re-routing failed: you have to be either be an admin or the owner to edit this recipe"
@@ -252,7 +171,7 @@ post('/users/:id/update') do
             db.execute("UPDATE users SET email=(?) WHERE id=(?)",email,user_id)
             session[:active_user_role] = db.execute("SELECT role FROM users WHERE id=(?)",user_id).first
 
-            redirect("/users/#{user_id}/profile")
+            redirect("/users/#{user_id}")
         else
             session[:message] = "User update failed: you must enter an actual email adress"
 
@@ -267,7 +186,7 @@ post('/users/:id/update') do
         db.execute("UPDATE users SET username=(?) WHERE id=(?)",new_username,user_id)
         session[:active_user] = new_username
 
-        redirect("/users/#{user_id}/profile")
+        redirect("/users/#{user_id}")
     end
 end
 
@@ -326,7 +245,7 @@ post('/recipes') do
         db.execute("INSERT INTO recipes_genre_rel(recipe_id,genre_id) VALUES (?,?)",latest_recipe['id'],genre['id'])
     end
 
-    redirect("/users/#{session[:active_user_id]}/profile")
+    redirect("/users/#{session[:active_user_id]}")
 end
 
 post('/recipes/:id/update') do

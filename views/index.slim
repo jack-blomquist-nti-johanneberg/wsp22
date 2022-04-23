@@ -2,12 +2,16 @@
 h2 Welcome to recpDB!
 p You can browse recipes created by anyone below!
 
+form action="/" method="GET"
+    input type="text" name="search" placeholder="Search for a recipe!" autocomplete="off"
+    input type="submit" value="Search"
+
 section.all_recipes
     -recipes.each_with_index do |recipe,i|
         article.recipe
             a href="/recipes/#{recipe['id']}"
                 h3=recipe['title']
-            a href="/users/#{recipe['user_id']}/profile"
+            a href="/users/#{recipe['user_id']}"
                 p by #{recipe['username']}
             section.genres
                 -genres[i].each do |genre|
