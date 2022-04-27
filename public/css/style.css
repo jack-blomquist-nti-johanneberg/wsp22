@@ -86,3 +86,7 @@ input{
 #reg_log_input{
     width: 300px;
 }
+
+.recipe_text_field{
+    size: 100%;
+}

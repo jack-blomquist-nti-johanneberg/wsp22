@@ -11,7 +11,7 @@ clear_message_routes = false
 
 # Clears the message cookie every other re-route
 #
-before do
+after do
     if session[:message]
         if clear_message_routes
             session[:message] = nil
@@ -20,6 +20,20 @@ before do
             clear_message_routes = true
         end
     end
+end
+
+# Updates sessions regarding user details
+#
+# @param [String] name
+# @param [Integer] id
+# @param [String] role
+#
+# @return [Nil]
+def update_active_user(name,id,role)
+    session[:active_user] = name
+    session[:active_user_id] = id.to_i
+    session[:active_user_role] = role
+    return nil
 end
 
 # Displays Landing Page
@@ -60,7 +74,12 @@ end
 get('/users/:id') do
     user_id = params[:id].to_i
 
-    slim(:"users/index", locals:{users_info:get_user(user_id)[0],users_recipes:get_user(user_id)[1]})
+    if get_user(user_id)[0].nil?
+        session[:message] = "Re-routing failed: user does not exist"
+        redirect('/error')
+    else
+        slim(:"users/index", locals:{users_info:get_user(user_id)[0],users_recipes:get_user(user_id)[1]})
+    end
 end
 
 # Displays the Edit Page for a user
@@ -238,9 +257,12 @@ end
 # @see Model#update_active_user
 post('/users/:id/delete') do
     id = params[:id].to_i
+    delete = params[:delete]
 
-    delete_user(id)
-    update_active_user(nil,nil,nil)
+    if delete == "on"
+        delete_user(id)
+        update_active_user(nil,nil,nil)
+    end
 
     redirect('/')
 end
@@ -256,9 +278,9 @@ post('/comment') do
     recipe_id = session[:recipe_id].to_i
     date = Time.now.strftime("%Y-%b-%d")
 
-    post_comment(recipe_id,comment,date)
+    post_comment(recipe_id,comment,date,session[:active_user_id].to_i)
 
-    redirect("/recipes/#{recipe_id}")
+    redirect("/recipes/#{recipe_id}#co")
 end
 
 # Creates a new recipe and redirects to "/users/#{session[:active_user_id]}"
@@ -295,7 +317,7 @@ post('/recipes') do
         redirect('/recipes/new')
     end
 
-    post_recipe(title,background,ingredients,steps,genre1,genre2,genre3)
+    post_recipe(title,background,ingredients,steps,genre1,genre2,genre3,session[:active_user_id].to_i)
 
     redirect("/users/#{session[:active_user_id]}")
 end
@@ -334,8 +356,11 @@ end
 # @see Model#delete_recipe
 post('/recipes/:id/delete') do
     id = params[:id].to_i
+    delete = params[:delete]
 
-    delete_recipe(id)
+    if delete == "on"
+        delete_recipe(id)
+    end
 
     redirect('/')
 end

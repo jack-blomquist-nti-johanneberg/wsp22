@@ -13,20 +13,6 @@ def db_connection(route)
     return db
 end
 
-# Updates sessions regarding user details
-#
-# @param [String] name
-# @param [Integer] id
-# @param [String] role
-#
-# @return [Nil]
-def update_active_user(name,id,role)
-    session[:active_user] = name
-    session[:active_user_id] = id.to_i
-    session[:active_user_role] = role
-    return nil
-end
-
 # Updates information about visible users to decide if they are deleted or not
 #
 # @param [String] array
@@ -170,16 +156,11 @@ end
 #
 # @param [Integer] id
 #
-# @return [Array] containing both user data and user recipes
+# @return [Array] containing both user data and user recipes, or [Nil] if there is no data
 def get_user(id)
     db = db_connection('db/db.db')
     user_data = db.execute("SELECT * FROM users WHERE id=(?)",id).first
     user_recipes = db.execute("SELECT title,id FROM recipes WHERE user_id=(?)",id)
-
-    if user_data.nil?
-        session[:message] = "Re-routing failed: user does not exist"
-        redirect('/error')
-    end
 
     return user_data,user_recipes
 end
@@ -275,10 +256,10 @@ end
 # @param [String] date
 #
 # @return [Nil]
-def post_comment(recipe_id,comment,date)
+def post_comment(recipe_id,comment,date,user_id)
     db = db_connection('db/db.db')
 
-    db.execute("INSERT INTO comments(user_id,recipe_id,content,date) VALUES (?,?,?,?)",session[:active_user_id].to_i,recipe_id,comment,date)
+    db.execute("INSERT INTO comments(user_id,recipe_id,content,date) VALUES (?,?,?,?)",user_id,recipe_id,comment,date)
 
     return nil
 end
@@ -294,10 +275,10 @@ end
 # @param [String] genre3
 #
 # @return [Nil]
-def post_recipe(title,background,ingredients,steps,genre1,genre2,genre3)
+def post_recipe(title,background,ingredients,steps,genre1,genre2,genre3,user_id)
     db = db_connection('db/db.db')
 
-    db.execute("INSERT INTO recipes(title,info,ingredients,steps,user_id) VALUES (?,?,?,?,?)",title,background,ingredients,steps,session[:active_user_id].to_i)
+    db.execute("INSERT INTO recipes(title,info,ingredients,steps,user_id) VALUES (?,?,?,?,?)",title,background,ingredients,steps,user_id)
 
     latest_recipe = db.execute("SELECT id FROM recipes ORDER BY id DESC").first
 
