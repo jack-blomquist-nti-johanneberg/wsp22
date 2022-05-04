@@ -9,7 +9,6 @@ $stress_array = []
 def db_connection(route)
     db = SQLite3::Database.new(route)
     db.results_as_hash = true
-    p db.class
     return db
 end
 
