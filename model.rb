@@ -73,7 +73,7 @@ end
 # @return [Hash] 
 #   * :user_id [Integer] the id of the user
 #   * :title [String] the title of the recipe
-def owner_check(id)
+def owner_check_recipe(id)
     db = db_connection('db/db.db')
     return db.execute("SELECT user_id,title FROM recipes WHERE id=(?)",id).first
 end

@@ -130,16 +130,16 @@ end
 #
 # @param [Integer] recipe_id, the ID for the recipe
 #
-# @see Model#owner_check
+# @see Model#owner_check_recipe
 get('/recipes/:id/edit') do
     recipe_id = params[:id]
 
-    if owner_check(recipe_id).class == NilClass
+    if owner_check_recipe(recipe_id).class == NilClass
         session[:message] = "Re-routing failed: recipe does not exist"
         redirect('/error')
     else
-        if owner_check(recipe_id)['user_id'] == session[:active_user_id] || session[:active_user_role] == "admin"
-            @recipe_name = owner_check(recipe_id)['title']
+        if owner_check_recipe(recipe_id)['user_id'] == session[:active_user_id] || session[:active_user_role] == "admin"
+            @recipe_name = owner_check_recipe(recipe_id)['title']
             slim(:"recipes/edit",locals:{recipe_id:recipe_id})
         else
             session[:message] = "Re-routing failed: you have to be either be an admin or the owner to edit this recipe"
@@ -230,22 +230,27 @@ post('/users/:id/update') do
     email = params[:email]
     new_username = params[:username]
 
-    if email != nil
-        if not(email_check(email,user_id))
-            session[:message] = "User update failed: you must enter an actual email adress"
-            redirect("/users/#{user_id}/edit")
-        else
-            update_active_user(session[:active_user],session[:active_user_id],email_check(email,user_id)[-1])
-            redirect("/users/#{user_id}")
+    if user_id == session[:active_user_id]
+        if email != nil
+            if not(email_check(email,user_id))
+                session[:message] = "User update failed: you must enter an actual email adress"
+                redirect("/users/#{user_id}/edit")
+            else
+                update_active_user(session[:active_user],session[:active_user_id],email_check(email,user_id)[-1])
+                redirect("/users/#{user_id}")
+            end
         end
-    end
 
-    if change_username(new_username,user_id)
-        session[:active_user] = new_username
-        redirect("/users/#{user_id}")
+        if change_username(new_username,user_id)
+            session[:active_user] = new_username
+            redirect("/users/#{user_id}")
+        else
+            session[:message] = "User update failed: new username too long, it must be shorter than 33 characters"
+            redirect("/users/#{user_id}/edit")
+        end
     else
-        session[:message] = "User update failed: new username too long, it must be shorter than 33 characters"
-        redirect("/users/#{user_id}/edit")
+        session[:message] == "Update action failed: Logged in user and user update request do not match"
+        redirect('/error')
     end
 end
 
@@ -259,11 +264,15 @@ post('/users/:id/delete') do
     id = params[:id].to_i
     delete = params[:delete]
 
-    if delete == "on"
-        delete_user(id)
-        update_active_user(nil,nil,nil)
+    if id == session[:active_user_id] || session[:active_user_role] == "admin"
+        if delete == "on"
+            delete_user(id)
+            update_active_user(nil,nil,nil)
+        end
+    else
+        session[:message] == "Delete action failed: Logged in user and user delete request do not match"
+        redirect('/error')
     end
-
     redirect('/')
 end
 
@@ -317,7 +326,12 @@ post('/recipes') do
         redirect('/recipes/new')
     end
 
-    post_recipe(title,background,ingredients,steps,genre1,genre2,genre3,session[:active_user_id].to_i)
+    if session[:active_user_role] == "verified" || session[:active_user_role] == "admin"
+        post_recipe(title,background,ingredients,steps,genre1,genre2,genre3,session[:active_user_id].to_i)
+    else
+        session[:message] == "Create action failed: Logged in user and recipe create request do not match"
+        redirect('/error')
+    end
 
     redirect("/users/#{session[:active_user_id]}")
 end
@@ -344,7 +358,12 @@ post('/recipes/:id/update') do
     genre2 = params[:genre2].to_s
     genre3 = params[:genre3].to_s
 
-    change_recipe(id,title,background,ingredients,steps,genre1,genre2,genre3)
+    if owner_check_recipe(id)[:user_id] == session[:active_user_id] || session[:active_user_role] = "admin"
+        change_recipe(id,title,background,ingredients,steps,genre1,genre2,genre3)
+    else
+        session[:message] == "Update action failed: Logged in user and recipe update request do not match"
+        redirect('/error')
+    end
 
     redirect('/')
 end
@@ -358,9 +377,13 @@ post('/recipes/:id/delete') do
     id = params[:id].to_i
     delete = params[:delete]
 
-    if delete == "on"
-        delete_recipe(id)
+    if owner_check_recipe(id)[:user_id] == session[:active_user_id] || session[:active_user_role] = "admin"
+        if delete == "on"
+            delete_recipe(id)
+        end
+    else
+        session[:message] == "Delete action failed: Logged in user and recipe delete request do not match"
+        redirect('/error')
     end
-
     redirect('/')
 end
